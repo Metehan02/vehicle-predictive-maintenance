@@ -1,0 +1,18 @@
+paths:
+  raw_train: data/raw/aps_failure_training_set.csv
+  raw_test: data/raw/aps_failure_test_set.csv
+  processed_train: data/processed/train.csv
+  processed_test: data/processed/test.csv
+  model_output: models/
+
+data:
+  target_column: class
+  positive_class: pos
+  negative_class: neg
+  na_placeholder: "na"
+
+model:
+  random_state: 42
+  test_size: 0.2
+  cv_folds: 5
+
