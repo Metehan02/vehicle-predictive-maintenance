@@ -10,9 +10,9 @@ data:
   positive_class: pos
   negative_class: neg
   na_placeholder: "na"
+  missing_threshold: 0.70
 
 model:
   random_state: 42
   test_size: 0.2
   cv_folds: 5
-
