@@ -57,7 +57,8 @@ def run(root=Path(".")):
     target_col = config["data"]["target_column"]
     positive_class = config["data"]["positive_class"]
     threshold = config["data"]["missing_threshold"]
-    scaler_path = root / config["paths"]["model_output"] / "scaler.pkl"
+    model_output = root / config["paths"]["model_output"]
+    scaler_path = model_output / "scaler.pkl"
 
     print("Loading data...")
     train_df, test_df = load_data(config, root)
@@ -70,6 +71,10 @@ def run(root=Path(".")):
 
     print("Encoding target...")
     train_df, test_df = encode_target(train_df, test_df, target_col, positive_class)
+
+    feature_cols = [c for c in train_df.columns if c != target_col]
+    joblib.dump(feature_cols, model_output / "feature_cols.pkl")
+    print(f"Saved feature columns list ({len(feature_cols)} cols)")
 
     print("Scaling features...")
     train_df, test_df = scale_features(train_df, test_df, target_col, scaler_path)
