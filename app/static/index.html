@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vehicle Predictive Maintenance</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: white;
+      padding: 1.5rem 2rem;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    header p { font-size: 0.85rem; color: #aab; margin-top: 4px; }
+
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 2rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #1a1a2e;
+    }
+
+    .upload-area {
+      border: 2px dashed #ccd;
+      border-radius: 8px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .upload-area:hover { border-color: #4f8ef7; }
+    .upload-area.dragover { border-color: #4f8ef7; background: #f0f5ff; }
+
+    .upload-area p { color: #888; font-size: 0.9rem; margin-top: 8px; }
+
+    .upload-area input[type="file"] { display: none; }
+
+    .file-name {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #4f8ef7;
+      font-weight: 500;
+    }
+
+    .note {
+      font-size: 0.8rem;
+      color: #999;
+      margin-top: 0.75rem;
+    }
+
+    button {
+      background: #1a1a2e;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-top: 1.25rem;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #2d2d50; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+
+    .spinner {
+      display: none;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    .summary {
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric {
+      background: white;
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .metric .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+
+    .metric .label {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .metric.danger .value { color: #e74c3c; }
+    .metric.safe .value { color: #27ae60; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background: #f4f6f9;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: #555;
+      border-bottom: 1px solid #eee;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .badge.pos { background: #fdecea; color: #c0392b; }
+    .badge.neg { background: #eafaf1; color: #1e8449; }
+
+    .prob-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prob-bar-bg {
+      flex: 1;
+      height: 6px;
+      background: #eee;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: #4f8ef7;
+      transition: width 0.3s;
+    }
+
+    .prob-bar-fill.high { background: #e74c3c; }
+
+    .error {
+      background: #fdecea;
+      color: #c0392b;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      display: none;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Vehicle Predictive Maintenance</h1>
+  <p>APS Failure Detection · Scania Trucks · XGBoost · ROC-AUC 0.994</p>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Upload Sensor Data</h2>
+    <div class="upload-area" id="uploadArea">
+      <input type="file" id="fileInput" accept=".csv" />
+      <svg width="36" height="36" fill="none" stroke="#bbb" stroke-width="1.5" viewBox="0 0 24 24">
+        <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12M8 8l4-4 4 4"/>
+      </svg>
+      <p>Drag & drop a CSV file or <strong>click to browse</strong></p>
+    </div>
+    <div class="file-name" id="fileName"></div>
+    <p class="note">CSV should contain raw sensor readings in the same format as the Scania APS dataset.</p>
+    <button id="predictBtn" disabled>Run Prediction</button>
+    <div class="spinner" id="spinner">Analyzing sensor data...</div>
+    <div class="error" id="errorBox"></div>
+  </div>
+
+  <div class="summary" id="summary">
+    <div class="metric">
+      <div class="value" id="totalCount">-</div>
+      <div class="label">Total vehicles</div>
+    </div>
+    <div class="metric danger">
+      <div class="value" id="failCount">-</div>
+      <div class="label">Failures detected</div>
+    </div>
+    <div class="metric safe">
+      <div class="value" id="safeCount">-</div>
+      <div class="label">No failure</div>
+    </div>
+  </div>
+
+  <div class="card" id="resultsCard" style="display:none;">
+    <h2>Prediction Results</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Failure Probability</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  const uploadArea = document.getElementById("uploadArea");
+  const fileInput = document.getElementById("fileInput");
+  const fileName = document.getElementById("fileName");
+  const predictBtn = document.getElementById("predictBtn");
+  const spinner = document.getElementById("spinner");
+  const errorBox = document.getElementById("errorBox");
+  const summary = document.getElementById("summary");
+  const resultsCard = document.getElementById("resultsCard");
+  const resultsBody = document.getElementById("resultsBody");
+
+  uploadArea.addEventListener("click", () => fileInput.click());
+
+  uploadArea.addEventListener("dragover", e => {
+    e.preventDefault();
+    uploadArea.classList.add("dragover");
+  });
+
+  uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+
+  uploadArea.addEventListener("drop", e => {
+    e.preventDefault();
+    uploadArea.classList.remove("dragover");
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    fileName.textContent = file.name;
+    predictBtn.disabled = false;
+    predictBtn.dataset.file = file.name;
+    window._selectedFile = file;
+  }
+
+  predictBtn.addEventListener("click", async () => {
+    if (!window._selectedFile) return;
+
+    predictBtn.disabled = true;
+    spinner.style.display = "block";
+    errorBox.style.display = "none";
+    summary.style.display = "none";
+    resultsCard.style.display = "none";
+
+    const formData = new FormData();
+    formData.append("file", window._selectedFile);
+
+    try {
+      const res = await fetch("/predict", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.detail || "Prediction failed");
+
+      document.getElementById("totalCount").textContent = data.total_samples;
+      document.getElementById("failCount").textContent = data.failures_detected;
+      document.getElementById("safeCount").textContent = data.total_samples - data.failures_detected;
+      summary.style.display = "grid";
+
+      resultsBody.innerHTML = "";
+      data.results.forEach((r, i) => {
+        const pct = Math.round(r.failure_probability * 100);
+        const isHigh = r.prediction === 1;
+        resultsBody.innerHTML += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>
+              <div class="prob-bar">
+                <span style="min-width:38px;font-size:0.85rem">${pct}%</span>
+                <div class="prob-bar-bg">
+                  <div class="prob-bar-fill ${isHigh ? 'high' : ''}" style="width:${pct}%"></div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge ${r.prediction_label}">${r.prediction_label === 'pos' ? 'FAILURE RISK' : 'Normal'}</span></td>
+          </tr>`;
+      });
+
+      resultsCard.style.display = "block";
+
+    } catch (err) {
+      errorBox.textContent = "Error: " + err.message;
+      errorBox.style.display = "block";
+    } finally {
+      spinner.style.display = "none";
+      predictBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
